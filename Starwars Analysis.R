@@ -33,5 +33,54 @@ summary_df <- data %>%
     mode = ~get_mode(.)
   ), .names = "{.col}_{.fn}"))
 
-
 print(t(summary_df))
+
+#2. Find the distribution of the Numeric variables
+
+
+library(tidyr)
+
+# Pivot data for plotting
+starwars %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value") %>%
+  ggplot(aes(x = Variable, y = Value)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Numeric Variables in Starwars Dataset") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
