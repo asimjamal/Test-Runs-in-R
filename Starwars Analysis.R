@@ -14,21 +14,24 @@ library(reshape2)
 #Read the data file#
 data <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/starwars.csv", header = T,sep = ",", na.strings = "?")
 
-#Convert Non-Numeric to NA
-starwars_data <- data %>%
-  mutate_if(is.character, as.numeric)
+#1. What are the summary statistics (min, max, mean, mode) of each column in the starwars dataset
 
-#Remove non-numeric columns
-starwars_data <- select_if(starwars_data, is.numeric)
+#Function to calculate Mode
 
-#Function to check for Infinite or Missing Values
-check_data_quality <- function(data) {
-  missing_values <- sum(is.na(data))
-  infinite_values <- sum(!is.finite(as.matrix(data)))
-  return(list(missing_values = missing_values, infinite_values = infinite_values))
+get_mode <- function(v){
+  uniqv <- unique(na.omit(v))
+  uniqv[which.max(tabulate(match(v,uniqv)))]
 }
 
-#Check for missing data or infinite data
-data_quality <- check_data_quality(starwars_data)
-missing_values <- data_quality_clean$missing_values
-infinite_values_clean <- data_quality_clean$infinite_values
+#Apply Summary Stats
+
+summary_df <- data %>%
+  summarise(across(everything(), list(
+    min = ~if(is.numeric(.)) min(., na.rm = TRUE) else NA,
+    max = ~if(is.numeric(.)) max(., na.rm = TRUE) else NA,
+    mean = ~if(is.numeric(.)) mean(., na.rm = TRUE) else NA,
+    mode = ~get_mode(.)
+  ), .names = "{.col}_{.fn}"))
+
+
+print(t(summary_df))
