@@ -49,10 +49,16 @@ starwars %>%
   labs(title = "Distribution of Numeric Variables in Starwars Dataset") +
   theme_minimal()
 
+#3. Find the columns that contain missing or infinite values
 
+missing_col <- sapply(data, function(col) sum(is.na(col)))
+infinite_col <- sapply(starwars, function(col) if(is.numeric(col)) sum(!is.finite(col)) else 0)
 
-
-
+data.frame(
+  Variable = names(data),
+  Missing = missing_col,
+  Infinite = infinite_col
+) %>% filter(Missing > 0 | Infinite > 0)
 
 
 
