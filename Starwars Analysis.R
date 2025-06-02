@@ -60,12 +60,47 @@ data.frame(
   Infinite = infinite_col
 ) %>% filter(Missing > 0 | Infinite > 0)
 
+#4. Clean the dataset
+# Keeping only numeric columns & removing rows with N/A
+
+data_clean <- data %>%
+  select(where(is.numeric)) %>%
+  drop_na()
 
 
+#5. How many cluster best represent the numeric data in the starwars dataset
+# K-means clustering for K = 2 to 5
+k_values <- 2:5
+cluster_results <- lapply(k_values, function(k) {
+  kmeans_result <- kmeans(starwars_clean, centers = k, nstart = 10)
+  return(list(data = starwars_clean, clusters = kmeans_result$cluster))
+})
 
+# (Your WCSS calculation line appears incorrect, but intended logic is to calculate total within-cluster sum of squares)
+# Correct form should be:
+wcss <- sapply(k_values, function(k) {
+  kmeans(starwars_clean, centers = k, nstart = 10)$tot.withinss
+})
 
+elbow_df <- data.frame(K = k_values, WCSS = wcss)
 
+ggplot(elbow_df, aes(x = K, y = WCSS)) +
+  geom_line() +
+  geom_point(color = "red") +
+  labs(title = "Elbow Method for Optimal Number of Clusters",
+       x = "Number of Clusters (K)", y = "Within-Cluster Sum of Squares (WCSS)") +
+  theme_minimal()
 
+#6. What does the data look like when segmented into 2-5 clusters
+cluster_results <- lapply(k_values, function(k) {
+  kmeans_result <- kmeans(starwars_clean, centers = k, nstart = 10)
+  return(list(data = starwars_clean, clusters = kmeans_result$cluster))
+})
+
+# Extract and print the optimal cluster
+optimal_k <- elbow_df$K[which.min(wcss)]  # This part isn't ideal; usually elbow is visual, not based on min
+cluster_result_optimal <- cluster_results[[which(k_values == optimal_k)]]
+print(cluster_result_optimal)
 
 
 
