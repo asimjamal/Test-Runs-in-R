@@ -33,3 +33,21 @@ ggplot(orders, aes(x = order_dow)) +
   geom_bar(fill = "orange") +
   labs(title = "Orders by Day of Week", x = "Day", y = "Order Count") +
   theme_minimal()
+
+#Orders by Hour of the day
+ggplot(orders, aes(x = order_hour_of_day)) +
+  geom_histogram(binwidth = 1, fill = "seagreen", color = "black") +
+  labs(title = "Orders by Hour of Day", x = "Hour", y = "Order Count") +
+  theme_minimal()
+
+#Average Numers of Items per Order
+order_size <- order_products %>%
+  group_by(order_id) %>%
+  summarise(num_items = n())
+
+ggplot(order_size, aes(x = num_items)) +
+  geom_histogram(binwidth = 1, fill = "purple", color = "white") +
+  labs(title = "Number of Items per Order", x = "Items", y = "Frequency") +
+  theme_minimal() +
+  xlim(0, 50)
+
