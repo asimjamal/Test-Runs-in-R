@@ -82,6 +82,19 @@ ggplot(reorder_by_number, aes(x = order_number, y = reorder_ratio)) +
        y = "Reorder Ratio") +
   theme_minimal()
 
+##Reorder Vs First time orders
+reorder_counts <- order_products %>%
+  mutate(order_type = ifelse(reordered == 1, "Reorder", "First Time")) %>%
+  group_by(order_type) %>%
+  summarise(count = n())
+
+# Plot
+ggplot(reorder_counts, aes(x = order_type, y = count, fill = order_type)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Reorders vs First-Time Orders",
+       x = "Order Type", y = "Number of Products") +
+  theme_minimal()
+
 
 
 
