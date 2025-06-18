@@ -51,3 +51,37 @@ ggplot(order_size, aes(x = num_items)) +
   theme_minimal() +
   xlim(0, 50)
 
+#Combine with Order to see user trends
+# Merge to get user_id per order
+order_user_items <- orders %>%
+  inner_join(order_size, by = "order_id")
+
+# Average items per order per user
+user_order_stats <- order_user_items %>%
+  group_by(user_id) %>%
+  summarise(avg_items = mean(num_items))
+
+ggplot(user_order_stats, aes(x = avg_items)) +
+  geom_histogram(binwidth = 1, fill = "dodgerblue", color = "black") +
+  labs(title = "Avg Items Per Order Per User", x = "Avg Items", y = "Users") +
+  theme_minimal()
+
+##Reorder Ratio by order #
+# Calculate reorder ratio for each order number
+reorder_by_number <- orders %>%
+  inner_join(order_products, by = "order_id") %>%
+  group_by(order_number) %>%
+  summarise(reorder_ratio = mean(reordered, na.rm = TRUE))
+
+# Plot
+ggplot(reorder_by_number, aes(x = order_number, y = reorder_ratio)) +
+  geom_line(color = "steelblue") +
+  geom_smooth(se = FALSE, color = "darkred", linetype = "dashed") +
+  labs(title = "Reorder Ratio by Order Number",
+       x = "Order Number (User Order Sequence)",
+       y = "Reorder Ratio") +
+  theme_minimal()
+
+
+
+
