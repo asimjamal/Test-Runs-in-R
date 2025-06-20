@@ -17,6 +17,8 @@ library(scales)
 #Read the data file#
 orders <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/orders.csv", header = T,sep = ",", na.strings = "?")
 order_products <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/order_products__prior.csv", header = T,sep = ",", na.strings = "?")
+products <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/products.csv", header = TRUE, sep = ",", na.strings = "?")
+departments <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/departments.csv", header = TRUE, sep = ",", na.strings = "?")
 
 #Frequency of Orders - Days Since Prior Order
 ggplot(orders[!is.na(orders$days_since_prior_order), ], aes(x = days_since_prior_order)) +
@@ -95,6 +97,25 @@ ggplot(reorder_counts, aes(x = order_type, y = count, fill = order_type)) +
        x = "Order Type", y = "Number of Products") +
   theme_minimal()
 
+##Merge Product data with Department Info
+# Merge prior order data with products and departments
+prior_merged <- order_products %>%
+  left_join(products, by = "product_id") %>%
+  left_join(departments, by = "department_id") %>%
+  left_join(orders, by = "order_id")
 
+#Top 10 reordered products
+top_reordered_products <- prior_merged %>%
+  filter(reordered == 1) %>%
+  group_by(product_name) %>%
+  summarise(reorder_count = n()) %>%
+  arrange(desc(reorder_count)) %>%
+  slice_head(n = 10)
 
+# Plot
+ggplot(top_reordered_products, aes(x = reorder(product_name, reorder_count), y = reorder_count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 10 Reordered Products", x = "Product", y = "Reorder Count") +
+  theme_minimal()
 
