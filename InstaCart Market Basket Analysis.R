@@ -137,3 +137,16 @@ ggplot(reorder_rate_dept, aes(x = reorder(department, reorder_rate), y = reorder
   labs(title = "Reorder Rate by Department", x = "Department", y = "Reorder Rate") +
   scale_y_continuous(labels = scales::percent) +
   theme_minimal()
+
+#Reorder distribution per customer
+customer_reorders <- prior_merged %>%
+  group_by(user_id = user_id) %>%
+  summarise(total_orders = n(),
+            total_reorders = sum(reordered == 1, na.rm = TRUE)) %>%
+  mutate(reorder_ratio = total_reorders / total_orders)
+
+# Plot
+ggplot(customer_reorders, aes(x = reorder_ratio)) +
+  geom_histogram(binwidth = 0.05, fill = "orange", color = "black") +
+  labs(title = "Reorder Ratio per Customer", x = "Reorder Ratio", y = "Number of Customers") +
+  theme_minimal()
