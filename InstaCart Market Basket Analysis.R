@@ -119,3 +119,21 @@ ggplot(top_reordered_products, aes(x = reorder(product_name, reorder_count), y =
   labs(title = "Top 10 Reordered Products", x = "Product", y = "Reorder Count") +
   theme_minimal()
 
+
+#Reorder rate by department
+reorder_rate_dept <- prior_merged %>%
+  group_by(department, reordered) %>%
+  summarise(order_count = n(), .groups = "drop") %>%
+  pivot_wider(names_from = reordered, values_from = order_count, values_fill = 0) %>%
+  rename(not_reordered = `0`, reordered = `1`) %>%
+  mutate(total_orders = reordered + not_reordered,
+         reorder_rate = reordered / total_orders) %>%
+  arrange(desc(reorder_rate))
+
+# Plot
+ggplot(reorder_rate_dept, aes(x = reorder(department, reorder_rate), y = reorder_rate)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Reorder Rate by Department", x = "Department", y = "Reorder Rate") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal()
