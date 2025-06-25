@@ -150,3 +150,17 @@ ggplot(customer_reorders, aes(x = reorder_ratio)) +
   geom_histogram(binwidth = 0.05, fill = "orange", color = "black") +
   labs(title = "Reorder Ratio per Customer", x = "Reorder Ratio", y = "Number of Customers") +
   theme_minimal()
+
+## Average Basket Size and Product Diversity
+# Calculate basket size per order
+basket_size <- order_products %>%
+  group_by(order_id) %>%
+  summarise(total_items = n())
+
+# Plot distribution of basket sizes
+ggplot(basket_size, aes(x = total_items)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Basket Sizes", x = "Number of Items per Order", y = "Count of Orders") +
+  theme_minimal()
+
+
