@@ -163,4 +163,18 @@ ggplot(basket_size, aes(x = total_items)) +
   labs(title = "Distribution of Basket Sizes", x = "Number of Items per Order", y = "Count of Orders") +
   theme_minimal()
 
+#Calculate average markey size per customer
+# Merge order_products with orders to get user_id
+basket_per_user <- order_products %>%
+  left_join(orders, by = "order_id") %>%
+  group_by(user_id, order_id) %>%
+  summarise(items_in_order = n()) %>%
+  group_by(user_id) %>%
+  summarise(avg_basket_size = mean(items_in_order))
+
+# Plot distribution of average basket sizes per user
+ggplot(basket_per_user, aes(x = avg_basket_size)) +
+  geom_histogram(binwidth = 1, fill = "mediumpurple", color = "black") +
+  labs(title = "Average Basket Size per Customer", x = "Average Items per Order", y = "Number of Customers") +
+  theme_minimal()
 
