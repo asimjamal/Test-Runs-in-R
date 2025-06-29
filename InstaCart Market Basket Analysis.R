@@ -189,3 +189,39 @@ ggplot(product_diversity, aes(x = unique_products)) +
   geom_histogram(binwidth = 5, fill = "tomato", color = "black") +
   labs(title = "Product Diversity per Customer", x = "Number of Unique Products", y = "Number of Customers") +
   theme_minimal()
+
+##Reorder Probability by Product (Stickiness Score)
+#This will help us:
+#Identify products customers love and come back for.
+#Lay the groundwork for recommendation systems.
+
+# Step 1: Merge order details with product data
+order_data <- order_products %>%
+  inner_join(orders, by = "order_id")
+
+# Group by product_id to calculate reorder probability
+product_reorder_stats <- order_data %>%
+  group_by(product_id) %>%
+  summarise(
+    total_orders = n(),
+    times_reordered = sum(reordered, na.rm = TRUE),
+    reorder_prob = round(times_reordered / total_orders, 3)
+  ) %>%
+  arrange(desc(reorder_prob))
+
+product_reorder_stats <- product_reorder_stats %>%
+  inner_join(products, by = "product_id") %>%
+  select(product_id, product_name, everything())
+
+top_reordered <- product_reorder_stats %>%
+  top_n(15, reorder_prob)
+
+ggplot(top_reordered, aes(x = reorder(product_name, reorder_prob), y = reorder_prob)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  coord_flip() +
+  labs(
+    title = "Top 15 Products with Highest Reorder Probability",
+    x = "Product Name",
+    y = "Reorder Probability"
+  ) +
+  theme_minimal()
