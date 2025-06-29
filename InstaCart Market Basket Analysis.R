@@ -178,3 +178,14 @@ ggplot(basket_per_user, aes(x = avg_basket_size)) +
   labs(title = "Average Basket Size per Customer", x = "Average Items per Order", y = "Number of Customers") +
   theme_minimal()
 
+#Product Diversity per customer
+product_diversity <- order_products %>%
+  left_join(orders, by = "order_id") %>%
+  group_by(user_id) %>%
+  summarise(unique_products = n_distinct(product_id))
+
+# Plot distribution of product diversity
+ggplot(product_diversity, aes(x = unique_products)) +
+  geom_histogram(binwidth = 5, fill = "tomato", color = "black") +
+  labs(title = "Product Diversity per Customer", x = "Number of Unique Products", y = "Number of Customers") +
+  theme_minimal()
