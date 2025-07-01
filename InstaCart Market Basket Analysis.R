@@ -225,3 +225,19 @@ ggplot(top_reordered, aes(x = reorder(product_name, reorder_prob), y = reorder_p
     y = "Reorder Probability"
   ) +
   theme_minimal()
+
+##Time Gap Between Orders (Customer Retention Analysis)
+
+# Filter prior orders and remove NA values
+order_gaps <- orders %>%
+  filter(eval_set == "prior", !is.na(days_since_prior_order))
+
+ggplot(order_gaps, aes(x = days_since_prior_order)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+  labs(
+    title = "Time Gap Between Orders",
+    x = "Days Since Prior Order",
+    y = "Number of Orders"
+  ) +
+  theme_minimal()
+
