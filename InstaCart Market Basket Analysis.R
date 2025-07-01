@@ -241,3 +241,53 @@ ggplot(order_gaps, aes(x = days_since_prior_order)) +
   ) +
   theme_minimal()
 
+#Calculate average time gap per user 
+avg_gap_per_user <- order_gaps %>%
+  group_by(user_id) %>%
+  summarise(
+    avg_gap = mean(days_since_prior_order, na.rm = TRUE),
+    orders_count = n()
+  ) %>%
+  arrange(avg_gap)
+
+ggplot(avg_gap_per_user, aes(x = avg_gap)) +
+  geom_histogram(binwidth = 1, fill = "coral", color = "black") +
+  labs(
+    title = "Average Time Between Orders per Customer",
+    x = "Average Days Between Orders",
+    y = "Number of Customers"
+  ) +
+  theme_minimal()
+
+
+##Segment Time Gaps by Weekday vs Weekend Shoppers
+#Identify weekend vs. weekday orders
+orders <- orders %>%
+  mutate(
+    day_type = case_when(
+      order_dow %in% c(0, 6) ~ "Weekend",  # 0 = Sunday, 6 = Saturday
+      TRUE ~ "Weekday"
+    )
+  )
+
+#Compare days_since_prior_order between both segments
+ggplot(orders %>% filter(!is.na(days_since_prior_order), eval_set == "prior"),
+       aes(x = days_since_prior_order, fill = day_type)) +
+  geom_density(alpha = 0.6) +
+  labs(
+    title = "Time Gap Between Orders by Day Type",
+    x = "Days Since Prior Order",
+    y = "Density",
+    fill = "Day Type"
+  ) +
+  theme_minimal()
+
+#Check avg gap
+orders %>%
+  filter(!is.na(days_since_prior_order), eval_set == "prior") %>%
+  group_by(day_type) %>%
+  summarise(avg_gap = mean(days_since_prior_order))
+
+
+
+
