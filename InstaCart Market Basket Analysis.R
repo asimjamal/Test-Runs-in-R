@@ -288,6 +288,36 @@ orders %>%
   group_by(day_type) %>%
   summarise(avg_gap = mean(days_since_prior_order))
 
+##Compare Loyal vs Infrequent Customers
+#Count total orders per user
+user_order_counts <- orders %>%
+  filter(eval_set == "prior") %>%
+  group_by(user_id) %>%
+  summarise(total_orders = n())
 
+#Merge with orders & classify loyalty
+orders_loyalty <- orders %>%
+  inner_join(user_order_counts, by = "user_id") %>%
+  mutate(loyalty_group = case_when(
+    total_orders >= 20 ~ "Loyal",
+    total_orders <= 5 ~ "Infrequent",
+    TRUE ~ "Moderate"
+  ))
 
+#Compare reorder gap between loyalty groups
+ggplot(orders_loyalty %>% filter(!is.na(days_since_prior_order), eval_set == "prior"),
+       aes(x = days_since_prior_order, fill = loyalty_group)) +
+  geom_density(alpha = 0.6) +
+  labs(
+    title = "Reorder Time Gap by Customer Loyalty",
+    x = "Days Since Prior Order",
+    y = "Density",
+    fill = "Loyalty Group"
+  ) +
+  theme_minimal()
+
+orders_loyalty %>%
+  filter(!is.na(days_since_prior_order), eval_set == "prior") %>%
+  group_by(loyalty_group) %>%
+  summarise(avg_gap = mean(days_since_prior_order))
 
