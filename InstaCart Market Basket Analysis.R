@@ -321,3 +321,35 @@ orders_loyalty %>%
   group_by(loyalty_group) %>%
   summarise(avg_gap = mean(days_since_prior_order))
 
+##Churn Risk Prediction Using Time Gaps Between Orders
+#Step 1: Calculate average and most recent gaps per customer
+# Filter for relevant data
+prior_orders <- orders %>% filter(eval_set == "prior" & !is.na(days_since_prior_order))
+
+# Calculate average and last gap per user
+user_gap_stats <- prior_orders %>%
+  group_by(user_id) %>%
+  summarise(
+    avg_gap = mean(days_since_prior_order, na.rm = TRUE),
+    last_gap = days_since_prior_order[order_number == max(order_number)]
+  ) %>%
+  mutate(
+    gap_ratio = last_gap / avg_gap,
+    churn_risk = case_when(
+      gap_ratio > 1.5 ~ "High Risk",
+      gap_ratio > 1.1 ~ "Moderate Risk",
+      TRUE ~ "Low Risk"
+    )
+  )
+
+#Step 2: Visualize churn risk categories
+ggplot(user_gap_stats, aes(x = gap_ratio, fill = churn_risk)) +
+  geom_histogram(binwidth = 0.1, alpha = 0.7, color = "black") +
+  scale_fill_manual(values = c("Low Risk" = "#2ca02c", "Moderate Risk" = "#ff7f0e", "High Risk" = "#d62728")) +
+  labs(
+    title = "Churn Risk Distribution Based on Time Gap Trends",
+    x = "Last Gap / Average Gap (Gap Ratio)",
+    y = "Number of Users",
+    fill = "Churn Risk Level"
+  ) +
+  theme_minimal()
