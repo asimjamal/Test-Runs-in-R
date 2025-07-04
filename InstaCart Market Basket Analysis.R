@@ -353,3 +353,8 @@ ggplot(user_gap_stats, aes(x = gap_ratio, fill = churn_risk)) +
     fill = "Churn Risk Level"
   ) +
   theme_minimal()
+
+#Step 3: View proportions of churn risk
+user_gap_stats %>%
+  count(churn_risk) %>%
+  mutate(percent = round(100 * n / sum(n), 1))
