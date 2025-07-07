@@ -358,3 +358,56 @@ ggplot(user_gap_stats, aes(x = gap_ratio, fill = churn_risk)) +
 user_gap_stats %>%
   count(churn_risk) %>%
   mutate(percent = round(100 * n / sum(n), 1))
+
+
+#Simple Churn Prediction Model (Logistic Regression)
+#We’ll predict whether a user is at high churn risk (based on gap ratio) using a few behavioral features.
+
+#Step 1: Prep the Dataset
+# 1. Average basket size per user
+basket_size <- order_products %>%
+  group_by(order_id) %>%
+  summarise(items = n()) %>%
+  left_join(orders, by = "order_id") %>%
+  filter(eval_set == "prior") %>%
+  group_by(user_id) %>%
+  summarise(avg_basket_size = mean(items))
+
+# 2. Reorder ratio
+reorder_rate <- order_products %>%
+  filter(!is.na(reordered)) %>%
+  left_join(orders, by = "order_id") %>%
+  filter(eval_set == "prior") %>%
+  group_by(user_id) %>%
+  summarise(reorder_ratio = mean(reordered))
+
+# 3. Merge with churn labels
+churn_model_data <- user_gap_stats %>%
+  left_join(basket_size, by = "user_id") %>%
+  left_join(reorder_rate, by = "user_id") %>%
+  mutate(churn_flag = ifelse(churn_risk == "High Risk", 1, 0)) %>%
+  select(user_id, avg_gap, last_gap, gap_ratio, avg_basket_size, reorder_ratio, churn_flag) %>%
+  na.omit()
+
+# Step 2: Train a Logistic Regression Model
+# Fit logistic regression model
+churn_model <- glm(churn_flag ~ gap_ratio + avg_basket_size + reorder_ratio,
+                   data = churn_model_data, family = "binomial")
+
+summary(churn_model)
+
+#Step 3: Evaluate Performance (Optional Quick View)
+# Predict probabilities
+churn_model_data$predicted_prob <- predict(churn_model, type = "response")
+
+# Basic thresholding (0.5)
+churn_model_data$predicted_class <- ifelse(churn_model_data$predicted_prob > 0.5, 1, 0)
+
+# Accuracy
+mean(churn_model_data$predicted_class == churn_model_data$churn_flag)
+
+#Step 4: Visualize Predicted Churn Risk Distribution
+ggplot(churn_model_data, aes(x = predicted_prob)) +
+  geom_histogram(binwidth = 0.05, fill = "steelblue", color = "white") +
+  labs(title = "Predicted Churn Probability", x = "Probability", y = "Users") +
+  theme_minimal()
