@@ -13,6 +13,8 @@ library(tidyverse)
 library(data.table)
 library(ggplot2)
 library(scales) 
+library(dplyr)
+library(tidyr)
 
 #Read the data file#
 orders <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/orders.csv", header = T,sep = ",", na.strings = "?")
@@ -410,4 +412,87 @@ mean(churn_model_data$predicted_class == churn_model_data$churn_flag)
 ggplot(churn_model_data, aes(x = predicted_prob)) +
   geom_histogram(binwidth = 0.05, fill = "steelblue", color = "white") +
   labs(title = "Predicted Churn Probability", x = "Probability", y = "Users") +
+  theme_minimal()
+
+
+#Product-Level Churn Signals : Find products that users used to buy often, but have stopped buying recently — a signal of disengagement or churn.
+#Step 1: Identify Last Order per User
+# Get each user's last order
+last_orders <- orders %>%
+  filter(eval_set == "prior") %>%
+  group_by(user_id) %>%
+  summarise(last_order_id = order_id[which.max(order_number)])
+
+#Step 2: Find Products NOT Purchased in Last Order
+# All products bought before last order
+all_purchases <- order_products %>%
+  inner_join(orders, by = "order_id") %>%
+  filter(eval_set == "prior")
+
+# Get products per user across all prior orders except last one
+prior_product_history <- all_purchases %>%
+  inner_join(last_orders, by = "user_id") %>%
+  filter(order_id != last_order_id) %>%
+  group_by(user_id, product_id) %>%
+  summarise(times_bought = n(), .groups = "drop")
+
+# Products bought in last order
+last_order_products <- order_products %>%
+  semi_join(last_orders, by = "order_id") %>%
+  select(order_id, product_id) %>%
+  distinct()
+
+# Products dropped in last order
+# Rename last_order_id to match the column name in order_products
+last_order_ids <- last_orders %>%
+  rename(order_id = last_order_id)
+
+# Now join to get products in those last orders
+last_order_products <- order_products %>%
+  semi_join(last_order_ids, by = "order_id") %>%
+  select(order_id, product_id) %>%
+  distinct()
+
+#Step 3: Identify Top Dropped Products
+# Total times each product was ever bought
+product_order_counts <- order_products %>%
+  group_by(product_id) %>%
+  summarise(total_orders = n(), .groups = "drop")
+
+# Times each product appeared in a user's last order
+last_order_ids <- last_orders %>%
+  rename(order_id = last_order_id)
+
+last_order_products <- order_products %>%
+  semi_join(last_order_ids, by = "order_id") %>%
+  select(order_id, product_id) %>%
+  distinct()
+
+last_product_counts <- last_order_products %>%
+  group_by(product_id) %>%
+  summarise(last_ordered = n(), .groups = "drop")
+
+# Merge and calculate drop-off
+product_churn_risk <- product_order_counts %>%
+  left_join(last_product_counts, by = "product_id") %>%
+  mutate(last_ordered = replace_na(last_ordered, 0),
+         churn_ratio = 1 - (last_ordered / total_orders)) %>%
+  arrange(desc(churn_ratio)) %>%
+  filter(total_orders > 20)  # optional: exclude rarely purchased products
+
+#Step 4: Visualize Top Dropped Products
+# Join product names
+top_dropped <- product_churn_risk %>%
+  inner_join(products, by = "product_id") %>%
+  select(product_name, churn_ratio, total_orders) %>%
+  arrange(desc(churn_ratio)) %>%
+  slice_head(n = 15)
+
+# Plot
+ggplot(top_dropped, aes(x = reorder(product_name, churn_ratio), y = churn_ratio)) +
+  geom_col(fill = "tomato") +
+  coord_flip() +
+  labs(title = "Top Dropped Products (Churn Risk)",
+       x = "Product",
+       y = "Churn Ratio") +
   theme_minimal()
