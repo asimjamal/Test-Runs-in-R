@@ -496,3 +496,56 @@ ggplot(top_dropped, aes(x = reorder(product_name, churn_ratio), y = churn_ratio)
        x = "Product",
        y = "Churn Ratio") +
   theme_minimal()
+
+
+#Customer Segmentation using RFM Analysis using the Instacart dataset
+#Step 1:Prep Required Data
+# Combine user orders with product count
+order_items_per_user <- order_products %>%
+  inner_join(orders, by = "order_id") %>%
+  group_by(user_id, order_id, order_number, order_dow, order_hour_of_day, days_since_prior_order) %>%
+  summarise(products_purchased = n(), .groups = "drop")
+
+# Get the most recent order number for each user
+last_order_info <- orders %>%
+  group_by(user_id) %>%
+  summarise(last_order_number = max(order_number, na.rm = TRUE), .groups = "drop")
+#Step 2:Calculate RFM Metrics
+# RFM Metrics per user
+rfm <- order_items_per_user %>%
+  group_by(user_id) %>%
+  summarise(
+    recency = sum(days_since_prior_order[order_number == max(order_number, na.rm = TRUE)], na.rm = TRUE),
+    frequency = n_distinct(order_id),
+    monetary = mean(products_purchased),
+    .groups = "drop"
+  ) %>%
+  na.omit()
+
+#Step 3: Segment Users Using K-means Clustering
+# Scale the RFM values
+rfm_scaled <- rfm %>%
+  select(-user_id) %>%
+  scale()
+
+# Apply K-means (choose 3 to 5 clusters to start)
+set.seed(42)
+rfm_clusters <- kmeans(rfm_scaled, centers = 4, nstart = 25)
+
+# Attach cluster labels
+rfm$segment <- as.factor(rfm_clusters$cluster)
+
+#Step 4:Visualize Clusters
+
+ggplot(rfm, aes(x = frequency, y = monetary, color = segment)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Customer Segmentation using RFM",
+       x = "Frequency (# Orders)",
+       y = "Monetary (Avg. Items per Order)",
+       color = "Segment") +
+  theme_minimal()
+
+#Segment 1: Loyal + Big basket shoppers
+#Segment 2: Infrequent + Small basket
+#Segment 3: High frequency but low value
+#Segment 4: Recent reactivations, etc.
