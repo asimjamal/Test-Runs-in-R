@@ -549,3 +549,38 @@ ggplot(rfm, aes(x = frequency, y = monetary, color = segment)) +
 #Segment 2: Infrequent + Small basket
 #Segment 3: High frequency but low value
 #Segment 4: Recent reactivations, etc.
+
+
+#Market Basket Analysis using Association Rules with the arules package in R. This technique helps us find frequently bought together products — super useful for cross-sell strategies and product placement.
+
+#Step 1: Install & Load Required Libraries
+install.packages("arules")
+install.packages("arulesViz")
+library(arules)
+library(arulesViz)
+library(dplyr)
+#Step 2: Prepare the Data
+# Load product names
+products <- read.csv("/Users/asimjamal/Downloads/Website/R EDA/Instacart Dataset/products.csv")
+
+# Merge product names into the order_products
+order_products_named <- order_products %>%
+  left_join(products, by = "product_id") %>%
+  select(order_id, product_name)
+# Create transactions object
+# Convert to list format grouped by order
+transactions_list <- split(order_products_named$product_name, order_products_named$order_id)
+
+# Convert to transactions format
+transactions <- as(transactions_list, "transactions")
+
+#Step 3: Apply the Apriori Algorithm
+rules <- apriori(transactions,
+                 parameter = list(supp = 0.01, conf = 0.2, minlen = 2))
+
+# Step 4: Explore Top Rules
+# Sort by lift and show top 10
+inspect(sort(rules, by = "lift")[1:10])
+
+#Step 5: Visualize Association Rules
+plot(rules, method = "graph", engine = "htmlwidget")
