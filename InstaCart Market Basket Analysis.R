@@ -584,3 +584,40 @@ inspect(sort(rules, by = "lift")[1:10])
 
 #Step 5: Visualize Association Rules
 plot(rules, method = "graph", engine = "htmlwidget")
+
+#Customer Lifetime Value (CLV) using order frequency and average basket size per customer. This will help segment users into High / Medium / Low Value tiers.
+
+#Step 1:📥 Prepare Customer-Level Metrics
+# Calculate order frequency and average basket size per user
+customer_metrics <- orders %>%
+  filter(!is.na(user_id)) %>%
+  inner_join(order_products, by = "order_id") %>%
+  group_by(user_id) %>%
+  summarise(
+    num_orders = n_distinct(order_id),
+    total_items = n(),
+    avg_basket_size = total_items / num_orders,
+    .groups = "drop"
+  )
+
+#Step 2. 🧮 Calculate CLV Proxy Score
+customer_metrics <- customer_metrics %>%
+  mutate(CLV_proxy = num_orders * avg_basket_size)
+
+#Step 3. 📊 Segment into High / Medium / Low Value
+customer_metrics <- customer_metrics %>%
+  mutate(
+    clv_segment = case_when(
+      CLV_proxy >= quantile(CLV_proxy, 0.75) ~ "High Value",
+      CLV_proxy >= quantile(CLV_proxy, 0.25) ~ "Medium Value",
+      TRUE ~ "Low Value"
+    )
+  )
+
+#Step 4. 📈 Visualize the Segmentation
+ggplot(customer_metrics, aes(x = CLV_proxy, fill = clv_segment)) +
+  geom_histogram(bins = 50, color = "white") +
+  scale_fill_manual(values = c("High Value" = "#1b9e77", "Medium Value" = "#7570b3", "Low Value" = "#d95f02")) +
+  labs(title = "Customer Lifetime Value Segments",
+       x = "CLV Proxy Score", y = "Number of Customers") +
+  theme_minimal()
