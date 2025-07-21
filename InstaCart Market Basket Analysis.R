@@ -621,3 +621,119 @@ ggplot(customer_metrics, aes(x = CLV_proxy, fill = clv_segment)) +
   labs(title = "Customer Lifetime Value Segments",
        x = "CLV Proxy Score", y = "Number of Customers") +
   theme_minimal()
+
+
+#Clustering Products by Co-Purchase Behavior
+
+#Step 1: Build the Product-Basket Matrix
+# Filter for a manageable number of products (e.g., top 100)
+top_products <- order_products %>%
+  count(product_id, sort = TRUE) %>%
+  top_n(100, wt = n) %>%
+  pull(product_id)
+
+# Filter orders that contain these top products
+filtered_orders <- order_products %>%
+  filter(product_id %in% top_products)
+
+# Create a basket matrix: order_id × product_id
+basket_matrix <- filtered_orders %>%
+  mutate(value = 1) %>%
+  pivot_wider(names_from = product_id, values_from = value, values_fill = 0)
+
+#Step 2: Create Product Co-occurrence Matrix
+# Remove order_id column and convert to matrix
+basket_matrix_data <- as.matrix(basket_matrix[ , -1])
+
+# Co-occurrence: product x product
+co_occurrence <- t(basket_matrix_data) %*% basket_matrix_data
+
+# Top 50 products instead of 100
+top_products <- order_products %>%
+  count(product_id, sort = TRUE) %>%
+  slice_head(n = 50) %>%
+  pull(product_id)
+
+# Filter orders that only include top products
+filtered_orders <- order_products %>%
+  filter(product_id %in% top_products)
+
+# Optional: limit to smaller baskets (2–10 products)
+valid_orders <- filtered_orders %>%
+  count(order_id) %>%
+  filter(n >= 2 & n <= 10) %>%
+  pull(order_id)
+
+filtered_orders <- filtered_orders %>%
+  filter(order_id %in% valid_orders)
+
+library(tidyr)
+
+basket_matrix <- filtered_orders %>%
+  mutate(value = 1) %>%
+  pivot_wider(names_from = product_id, values_from = value, values_fill = list(value = 0))
+
+set.seed(123)
+sample_orders <- sample(unique(order_products$order_id), 5000)
+
+filtered_orders <- order_products %>%
+  filter(product_id %in% top_products, order_id %in% sample_orders)
+
+# Rebuild basket_matrix as before
+basket_matrix <- filtered_orders %>%
+  mutate(value = 1) %>%
+  pivot_wider(names_from = product_id, values_from = value, values_fill = list(value = 0))
+
+#Step 3: Apply K-means Clustering
+# Normalize rows
+library(scales)
+norm_matrix <- apply(co_occurrence, 1, function(x) rescale(x, to = c(0, 1)))
+norm_matrix <- t(norm_matrix)  # Transpose back
+
+# Run K-means (e.g., 5 clusters)
+set.seed(123)
+k_clusters <- kmeans(norm_matrix, centers = 5)
+
+# Assign cluster labels
+product_clusters <- data.frame(
+  product_id = rownames(co_occurrence),
+  cluster = as.factor(k_clusters$cluster)
+)
+
+# Remove order_id column (if still present)
+basket_data <- basket_matrix %>% select(-order_id)
+
+# Scale data before PCA
+basket_scaled <- scale(basket_data)
+
+# Apply PCA
+pca_result <- prcomp(basket_scaled, center = TRUE, scale. = TRUE)
+
+# Use top 2 components
+pca_df <- as.data.frame(pca_result$x[, 1:2])
+
+#Step 4: K-Means Clustering on Products Based on Co-Purchase
+# Transpose the basket data to make it product-wise (for clustering products)
+product_matrix <- t(as.matrix(basket_data))
+
+# Apply K-means (let’s try 5 clusters)
+set.seed(123)
+k_result <- kmeans(product_matrix, centers = 5)
+
+# Add cluster info to product_id
+product_clusters <- data.frame(
+  product_id = colnames(basket_data),
+  cluster = k_result$cluster
+)
+
+#Step 5: Visualize Product Clusters (if PCA was used)
+# Use PCA of transposed matrix (products)
+product_pca <- prcomp(product_matrix, center = TRUE, scale. = TRUE)
+pca_products_df <- as.data.frame(product_pca$x[, 1:2])
+pca_products_df$product_id <- rownames(product_pca$x)
+pca_products_df$cluster <- as.factor(product_clusters$cluster)
+
+ggplot(pca_products_df, aes(x = PC1, y = PC2, color = cluster)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Product Clusters Based on Co-Purchase Behavior") +
+  theme_minimal()
