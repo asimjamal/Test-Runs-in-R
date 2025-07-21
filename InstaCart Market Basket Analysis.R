@@ -737,3 +737,44 @@ ggplot(pca_products_df, aes(x = PC1, y = PC2, color = cluster)) +
   geom_point(alpha = 0.7) +
   labs(title = "Product Clusters Based on Co-Purchase Behavior") +
   theme_minimal()
+
+#Demand Forecasting using time-series analysis
+#Step 1: Install & Load Required Libraries
+install.packages("prophet")
+library(prophet)
+library(dplyr)
+library(lubridate)
+
+#Step 2: Prepare Data – Daily Demand for a Top Product
+# Filter for that product and join with orders
+product_demand <- order_products %>%
+  filter(product_id == 24852) %>%
+  inner_join(orders, by = "order_id") %>%
+  filter(!is.na(order_number), !is.na(order_dow)) %>%
+  group_by(order_date = as.Date(eval_set == "prior", origin = "2015-01-01") + days(order_number)) %>%
+  summarise(demand = n(), .groups = "drop")
+
+# Simulate order_date based on order_number per user
+orders <- orders %>%
+  arrange(user_id, order_number) %>%
+  group_by(user_id) %>%
+  mutate(order_date = as.Date("2016-01-01") + days(order_number)) %>%
+  ungroup()
+
+# Now calculate daily demand for a top product (e.g., 24852 = organic bananas)
+product_demand <- order_products %>%
+  filter(product_id == 24852) %>%
+  inner_join(orders, by = "order_id") %>%
+  group_by(order_date) %>%
+  summarise(demand = n(), .groups = "drop")
+
+df_prophet <- product_demand %>%
+  rename(ds = order_date, y = demand)
+
+library(prophet)
+
+model <- prophet(df_prophet)
+future <- make_future_dataframe(model, periods = 30)
+forecast <- predict(model, future)
+plot(model, forecast)
+
