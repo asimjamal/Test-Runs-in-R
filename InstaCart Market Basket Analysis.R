@@ -778,3 +778,22 @@ future <- make_future_dataframe(model, periods = 30)
 forecast <- predict(model, future)
 plot(model, forecast)
 
+#Use days_since_prior_order to reconstruct a user’s actual ordering timeline, relative to a start date.
+# Convert NA to 0 for first orders
+orders$days_since_prior_order[is.na(orders$days_since_prior_order)] <- 0
+
+#Simulate realistic dates per user
+library(dplyr)
+library(lubridate)
+
+# Simulate realistic order dates using cumulative sum of days
+orders <- orders %>%
+  arrange(user_id, order_number) %>%
+  group_by(user_id) %>%
+  mutate(
+    order_date = as.Date("2016-01-01") + cumsum(days_since_prior_order)
+  ) %>%
+  ungroup()
+
+head(orders %>% select(user_id, order_number, days_since_prior_order, order_date))
+
