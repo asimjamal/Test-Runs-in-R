@@ -797,3 +797,48 @@ orders <- orders %>%
 
 head(orders %>% select(user_id, order_number, days_since_prior_order, order_date))
 
+##🧯 Outlier Detection
+
+#Calculate Order Frequency per User
+order_freq <- orders %>%
+  group_by(user_id) %>%
+  summarise(total_orders = max(order_number), .groups = "drop")
+
+#Calculate Average Basket Size per User
+basket_size <- order_products %>%
+  group_by(user_id = order_id) %>%   # order_id used as proxy for user
+  summarise(basket = n(), .groups = "drop") %>%
+  group_by(user_id) %>%
+  summarise(avg_basket_size = mean(basket), .groups = "drop")
+
+#Join Both Metrics
+user_stats <- order_freq %>%
+inner_join(basket_size, by = "user_id")
+
+#. Define Outliers Using IQR Method
+# IQR function
+get_outliers <- function(x) {
+  q1 <- quantile(x, 0.25)
+  q3 <- quantile(x, 0.75)
+  iqr <- q3 - q1
+  lower <- q1 - 1.5 * iqr
+  upper <- q3 + 1.5 * iqr
+  return(which(x < lower | x > upper))
+}
+
+# Detect outliers
+outlier_orders <- get_outliers(user_stats$total_orders)
+outlier_baskets <- get_outliers(user_stats$avg_basket_size)
+
+# Flag users
+user_stats <- user_stats %>%
+  mutate(
+    is_order_outlier = row_number() %in% outlier_orders,
+    is_basket_outlier = row_number() %in% outlier_baskets
+  )
+
+#View Outliers
+user_stats %>%
+  filter(is_order_outlier | is_basket_outlier) %>%
+  arrange(desc(total_orders), desc(avg_basket_size))
+
