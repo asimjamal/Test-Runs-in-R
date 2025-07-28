@@ -842,3 +842,30 @@ user_stats %>%
   filter(is_order_outlier | is_basket_outlier) %>%
   arrange(desc(total_orders), desc(avg_basket_size))
 
+
+user_journey <- orders %>%
+  filter(eval_set == "prior") %>%
+  group_by(user_id) %>%
+  summarise(total_orders = max(order_number), .groups = "drop")
+
+funnel <- user_journey %>%
+  summarise(
+    first_order_users = sum(total_orders >= 1),
+    repeat_buyers     = sum(total_orders >= 2),
+    loyal_users       = sum(total_orders >= 5),
+    power_users       = sum(total_orders >= 10)
+  ) %>%
+  pivot_longer(everything(), names_to = "stage", values_to = "user_count") %>%
+  mutate(stage = factor(stage, levels = c("first_order_users", "repeat_buyers", "loyal_users", "power_users")))
+
+
+
+ggplot(funnel, aes(x = stage, y = user_count)) +
+  geom_col(fill = "#00bfc4") +
+  geom_text(aes(label = user_count), vjust = -0.3, size = 4) +
+  labs(
+    title = "🛒 User Journey Funnel: From First Order to Loyalty",
+    x = "User Stage",
+    y = "Number of Users"
+  ) +
+  theme_minimal()
