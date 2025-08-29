@@ -1,4 +1,4 @@
-# 🛒 Instacart Market Basket Analysis – EDA Project
+# 🛒 Instacart Market Basket Analysis 
 
 **Author:** Asim Jamal  
 **Dataset:** [Instacart Market Basket Analysis (Kaggle)](https://www.kaggle.com/datasets/psparks/instacart-market-basket-analysis)  
